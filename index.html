@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Docs — Certificate & Invoice Generator</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;background:#f4f6fb;color:#111}
+    .wrap{max-width:900px;margin:48px auto;padding:20px}
+    .card{background:#fff;padding:20px;border-radius:10px;box-shadow:0 8px 30px rgba(2,6,23,.06)}
+    h1{margin:0 0 12px}
+    p{color:#444}
+    .links{display:flex;gap:12px;margin-top:18px}
+    a.button{display:inline-block;padding:12px 14px;background:#1e90ff;color:#fff;border-radius:8px;text-decoration:none}
+    footer{margin-top:18px;color:#666;font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Certificate & Invoice Generator</h1>
+      <p>Open a tool to create and export PDFs. Works fully in the browser — upload logo/signatures, add QR (generate or upload), preview, then export PDF.</p>
+
+      <div class="links">
+        <a class="button" href="certificate.html" target="_self">Open Certificate Creator</a>
+        <a class="button" href="invoice.html" target="_self">Open Invoice Creator</a>
+      </div>
+
+      <hr style="margin:18px 0;border:none;border-top:1px solid #eef2f7"/>
+
+      <p><strong>Quick tips:</strong></p>
+      <ul>
+        <li>Use the logo upload + logo size control to style the document.</li>
+        <li>Generate QR from text or upload your QR image to avoid CORS issues.</li>
+        <li>Signatures are embedded as data-URLs, so exported PDFs keep local images.</li>
+      </ul>
+
+      <footer>Save these files to a folder and open <code>index.html</code> in your browser.</footer>
+    </div>
+  </div>
+</body>
+</html>

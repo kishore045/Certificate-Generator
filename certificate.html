@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="ta">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Certificate Generator — logo size control + templates</title>
+  <style>
+    :root{--accent:#1e90ff;--muted:#666}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;margin:0;padding:16px;background:#f4f6fb;color:#111}
+    .container{display:grid;grid-template-columns:480px 1fr;gap:16px;max-width:1400px;margin:0 auto}
+    .card{background:white;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.06);padding:14px}
+    h2{margin:0 0 10px 0;font-size:18px}
+    label{display:block;font-size:13px;margin-top:10px;color:var(--muted)}
+    input,textarea,select{width:100%;padding:10px;border:1px solid #e6e9ef;border-radius:8px;margin-top:6px;font-size:14px;box-sizing:border-box}
+    input[type=range]{width:100%}
+    .range-row{display:flex;gap:8px;align-items:center}
+    .range-row input[type=number]{width:84px;padding:8px}
+    textarea{min-height:80px}
+    .actions{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+    button{padding:10px 14px;border-radius:10px;border:0;background:var(--accent);color:white;cursor:pointer}
+    button.secondary{background:#2d3748}
+    .small-btn{padding:8px 10px;border-radius:8px;font-size:13px}
+    .muted{color:var(--muted);font-size:13px;margin-top:8px}
+
+    .preview-wrap{padding:18px;overflow:auto}
+    .cert-shell{width:100%;max-width:820px;margin:0 auto;border-radius:12px;background:#fff;padding:22px;box-sizing:border-box;border:10px solid #f0f4ff}
+    .brand-center{display:flex;flex-direction:column;align-items:center;gap:10px}
+    .brand{font-weight:700;color:var(--accent);font-size:20px;display:flex;align-items:center;gap:12px}
+    .brand img{height:auto;width:auto;border-radius:8px;object-fit:contain;background:#fff;padding:6px;border:1px solid #eef2f7}
+    .cert-title{font-size:24px;margin:12px 0 8px 0;text-align:center}
+    .cert-body{padding:12px 28px;text-align:center;font-size:16px;color:#222}
+    .sig-row{display:flex;justify-content:space-between;align-items:flex-end;margin-top:26px;gap:12px}
+    .sig-item{text-align:center;flex:1;min-width:80px}
+    .sig-item img{max-height:72px;object-fit:contain;display:block;margin:0 auto 6px}
+    .sig-line{display:block;border-top:1px solid #ccc;margin-top:6px;padding-top:6px;color:var(--muted);font-size:13px}
+    .qr-box{display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 10px}
+    .qr-box img{height:88px;width:88px;object-fit:contain;border:1px dashed #e6e9ef;padding:6px;background:#fff;border-radius:6px}
+
+    /* Template 2 layout */
+    .tpl-2 .cert-shell{border-color:#fff4f0;background:linear-gradient(180deg,#fff,#fffaf6)}
+    .tpl-2 .brand img{height:auto}
+    .tpl-2 .sig-row{align-items:center}
+    .tpl-2 .sig-item img{max-height:56px}
+
+    /* Template 3 layout (single center signature) */
+    .tpl-3 .cert-shell{border-color:#eef7ff;background:linear-gradient(180deg,#fff,#f8fbff)}
+    .tpl-3 .brand img{height:auto}
+    .tpl-3 .sig-row{justify-content:center;gap:40px}
+    .tpl-3 .sig-item{flex:0 0 240px;text-align:center}
+    .tpl-3 .sig-item img{max-height:80px}
+
+    @media(max-width:980px){.container{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <h2>Controls</h2>
+
+      <label>Choose template</label>
+      <select id="templateSelect">
+        <option value="tpl1">Template 1 — Classic (2 sig)</option>
+        <option value="tpl2">Template 2 — Center logo & 3 signatures</option>
+        <option value="tpl3">Template 3 — Center logo & 1 centered signature</option>
+      </select>
+
+      <label>Organization / Brand</label>
+      <input id="orgName" placeholder="e.g. My Academy"/>
+
+      <label>Upload Logo (appears top; centered in T2/T3)</label>
+      <input id="logoUpload" type="file" accept="image/*"/>
+
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="removeLogoBtn" class="small-btn secondary">Remove logo</button>
+      </div>
+
+      <label style="margin-top:12px">Logo size (height in px)</label>
+      <div class="range-row">
+        <input id="logoSizeRange" type="range" min="40" max="220" value="72" />
+        <input id="logoSizeNumber" type="number" min="40" max="220" value="72" />
+      </div>
+      <div class="muted">Adjusts preview logo height (px). Default 72px. Value used when generating PDF.</div>
+
+      <label>Recipient Name</label>
+      <input id="name" placeholder="e.g. Kishore Babu"/>
+
+      <label>Certificate Title</label>
+      <input id="certTitle" value="Certificate of Completion" />
+
+      <label>Completion line</label>
+      <input id="completionLine" value="has successfully completed the" />
+
+      <label>Course / Content</label>
+      <input id="courseName" placeholder="e.g. Advanced Tamil Course"/>
+
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px">
+        <input type="checkbox" id="showDescription"/> <span>Show Description / Notes</span>
+      </label>
+      <label>Description / Notes</label>
+      <textarea id="description" placeholder="e.g. Completed with distinction"></textarea>
+
+      <label>Date</label>
+      <input id="date" type="date"/>
+
+      <hr style="margin:12px 0;border:none;border-top:1px dashed #eef2f7"/>
+
+      <h3 style="margin:6px 0">Ref number (editable / hideable)</h3>
+      <label style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="showRef" checked/> <span>Show Ref number in preview & PDF</span>
+      </label>
+      <label>Ref number</label>
+      <input id="refInput" placeholder="e.g. R-1234" />
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="genRefBtn" class="small-btn">Generate Ref</button>
+        <button id="clearRefBtn" class="small-btn secondary">Clear Ref</button>
+      </div>
+
+      <hr style="margin:12px 0;border:none;border-top:1px dashed #eef2f7"/>
+
+      <h3 style="margin:6px 0">Signatures</h3>
+      <label>Signature 1 (Left)</label>
+      <input id="sig1Upload" type="file" accept="image/*"/>
+      <label>Caption 1</label>
+      <input id="sig1Caption" placeholder="e.g. Director"/>
+
+      <label>Signature 2 (Center / Middle)</label>
+      <input id="sig2Upload" type="file" accept="image/*"/>
+      <label>Caption 2</label>
+      <input id="sig2Caption" placeholder="e.g. Head of Dept"/>
+
+      <label>Signature 3 (Right)</label>
+      <input id="sig3Upload" type="file" accept="image/*"/>
+      <label>Caption 3</label>
+      <input id="sig3Caption" placeholder="e.g. Principal"/>
+
+      <hr style="margin:12px 0;border:none;border-top:1px dashed #eef2f7"/>
+
+      <h3 style="margin:6px 0">QR — text or upload</h3>
+      <label style="display:flex;align-items:center;gap:8px">
+        <input type="radio" name="qrSource" id="qrSourceText" value="text" checked/> <span>Generate from text/URL</span>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:6px">
+        <input type="radio" name="qrSource" id="qrSourceUpload" value="upload"/> <span>Upload QR image</span>
+      </label>
+
+      <div id="qrTextRow" style="margin-top:8px">
+        <label>QR text / URL</label>
+        <input id="qrText" placeholder="https://example.com/verify?id=1234"/>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="genQrBtn" class="small-btn">Generate QR</button>
+          <button id="removeQrBtn" class="small-btn secondary">Remove QR</button>
+        </div>
+      </div>
+
+      <div id="qrUploadRow" style="display:none;margin-top:8px">
+        <label>Upload QR image</label>
+        <input id="qrUpload" type="file" accept="image/*"/>
+      </div>
+
+      <div class="actions">
+        <button id="updateBtn">Update preview</button>
+        <button id="downloadBtn" class="secondary">Generate PDF</button>
+      </div>
+
+      <p class="muted">Logo size control affects how large the logo appears in all templates and the exported PDF.</p>
+    </div>
+
+    <div class="card preview-wrap">
+      <div id="previewArea" class="tpl-1">
+        <!-- Template 1 (existing, two-signature) -->
+        <div id="tpl1Preview" class="cert-shell" style="display:block">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div class="brand">
+              <img id="logoPreview1" src="" alt="" style="display:none"/>
+              <div id="brandText1">Your Organization</div>
+            </div>
+            <div id="refContainer1" style="text-align:right;color:var(--muted);font-size:13px">
+              Ref: <span id="refDisplay1">R-0001</span>
+            </div>
+          </div>
+
+          <div class="cert-title" id="certTitle1">Certificate of Completion</div>
+
+          <div class="cert-body">
+            <div style="font-size:15px;color:#333" id="completionArea1">
+              <span id="completionLine1">has successfully completed the</span>
+              <div style="font-weight:700;font-size:20px;margin:8px 0" id="courseName1">[Course]</div>
+            </div>
+
+            <div style="margin-top:8px">
+              <div style="font-weight:700;font-size:20px;margin:6px 0" id="pName1">[Name]</div>
+            </div>
+
+            <div id="descWrap1" style="margin-top:12px;color:var(--muted);font-size:14px;display:none">
+              <em id="pDesc1">[Description]</em>
+            </div>
+
+            <div class="sig-row" style="align-items:center">
+              <div class="sig-item">
+                <img id="sig1Preview1" src="" alt="" style="display:none"/>
+                <span class="sig-line">Signature</span>
+                <div style="font-size:13px;color:var(--muted)" id="sig1Caption1"></div>
+              </div>
+
+              <div class="qr-box" id="qrBox1" style="display:none">
+                <img id="qrPreview1" src=""/>
+                <div style="font-size:12px;color:var(--muted);margin-top:6px">Scan to verify</div>
+              </div>
+
+              <div class="sig-item">
+                <img id="sig2Preview1" src="" alt="" style="display:none"/>
+                <span class="sig-line">Signature</span>
+                <div style="font-size:13px;color:var(--muted)" id="sig2Caption1"></div>
+              </div>
+            </div>
+
+            <div style="margin-top:18px;display:flex;justify-content:space-between;color:var(--muted);font-size:13px">
+              <div>Issued on: <span id="pDate1">--</span></div>
+              <div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Template 2 (3 signatures, centered logo) -->
+        <div id="tpl2Preview" class="cert-shell tpl-2" style="display:none">
+          <div class="brand-center">
+            <img id="logoPreview2" src="" alt="" style="display:none"/>
+            <div class="brand" id="brandText2">Your Organization</div>
+            <div id="refContainer2" style="text-align:center;color:var(--muted);font-size:13px">Ref: <span id="refDisplay2">R-0001</span></div>
+          </div>
+
+          <div class="cert-title" id="certTitle2">Certificate of Completion</div>
+
+          <div class="cert-body">
+            <div style="font-size:15px;color:#333;text-align:center" id="completionArea2">
+              <div style="font-weight:700;font-size:20px;margin:6px 0" id="pName2">[Name]</div>
+              <div id="completionLine2" style="margin-top:6px">has successfully completed the</div>
+              <div style="font-weight:700;font-size:20px;margin:8px 0" id="courseName2">[Course]</div>
+            </div>
+
+            <div id="descWrap2" style="margin-top:12px;color:var(--muted);font-size:14px;display:none;text-align:center">
+              <em id="pDesc2">[Description]</em>
+            </div>
+
+            <div class="sig-row" style="margin-top:26px;justify-content:space-around">
+              <div class="sig-item">
+                <img id="sig1Preview2" src="" alt="" style="display:none"/>
+                <span class="sig-line">Signature</span>
+                <div style="font-size:13px;color:var(--muted)" id="sig1Caption2"></div>
+              </div>
+
+              <div class="sig-item">
+                <img id="sig2Preview2" src="" alt="" style="display:none"/>
+                <span class="sig-line">Signature</span>
+                <div style="font-size:13px;color:var(--muted)" id="sig2Caption2"></div>
+              </div>
+
+              <div class="sig-item">
+                <img id="sig3Preview2" src="" alt="" style="display:none"/>
+                <span class="sig-line">Signature</span>
+                <div style="font-size:13px;color:var(--muted)" id="sig3Caption2"></div>
+              </div>
+            </div>
+
+            <div style="margin-top:18px;display:flex;justify-content:space-between;color:var(--muted);font-size:13px">
+              <div>Issued on: <span id="pDate2">--</span></div>
+              <div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Template 3 (single centered signature) -->
+        <div id="tpl3Preview" class="cert-shell tpl-3" style="display:none">
+          <div class="brand-center">
+            <img id="logoPreview3" src="" alt="" style="display:none"/>
+            <div class="brand" id="brandText3">Your Organization</div>
+            <div id="refContainer3" style="text-align:center;color:var(--muted);font-size:13px">Ref: <span id="refDisplay3">R-0001</span></div>
+          </div>
+
+          <div class="cert-title" id="certTitle3">Certificate of Completion</div>
+
+          <div class="cert-body">
+            <div style="font-size:15px;color:#333;text-align:center" id="completionArea3">
+              <div style="font-weight:700;font-size:20px;margin:6px 0" id="pName3">[Name]</div>
+              <div id="completionLine3" style="margin-top:6px">has successfully completed the</div>
+              <div style="font-weight:700;font-size:20px;margin:8px 0" id="courseName3">[Course]</div>
+            </div>
+
+            <div id="descWrap3" style="margin-top:12px;color:var(--muted);font-size:14px;display:none;text-align:center">
+              <em id="pDesc3">[Description]</em>
+            </div>
+
+            <div class="sig-row" style="margin-top:26px;justify-content:center">
+              <div class="sig-item">
+                <img id="sig2Preview3" src="" alt="" style="display:none"/>
+                <span class="sig-line">Signature</span>
+                <div style="font-size:13px;color:var(--muted)" id="sig2Caption3"></div>
+              </div>
+            </div>
+
+            <div style="margin-top:18px;display:flex;justify-content:space-between;color:var(--muted);font-size:13px">
+              <div>Issued on: <span id="pDate3">--</span></div>
+              <div></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- html2pdf -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  <script>
+    // Elements & fields
+    const templateSelect = document.getElementById('templateSelect');
+
+    const orgName = document.getElementById('orgName');
+    const logoUpload = document.getElementById('logoUpload');
+    const removeLogoBtn = document.getElementById('removeLogoBtn');
+
+    const logoSizeRange = document.getElementById('logoSizeRange');
+    const logoSizeNumber = document.getElementById('logoSizeNumber');
+
+    const nameEl = document.getElementById('name');
+    const certTitle = document.getElementById('certTitle');
+    const completionLine = document.getElementById('completionLine');
+    const courseName = document.getElementById('courseName');
+    const showDescription = document.getElementById('showDescription');
+    const descEl = document.getElementById('description');
+    const dateEl = document.getElementById('date');
+
+    const showRef = document.getElementById('showRef');
+    const refInput = document.getElementById('refInput');
+    const genRefBtn = document.getElementById('genRefBtn');
+    const clearRefBtn = document.getElementById('clearRefBtn');
+
+    const sig1Upload = document.getElementById('sig1Upload');
+    const sig2Upload = document.getElementById('sig2Upload');
+    const sig3Upload = document.getElementById('sig3Upload');
+    const sig1Caption = document.getElementById('sig1Caption');
+    const sig2Caption = document.getElementById('sig2Caption');
+    const sig3Caption = document.getElementById('sig3Caption');
+
+    const qrSourceText = document.getElementById('qrSourceText');
+    const qrSourceUpload = document.getElementById('qrSourceUpload');
+    const qrText = document.getElementById('qrText');
+    const genQrBtn = document.getElementById('genQrBtn');
+    const removeQrBtn = document.getElementById('removeQrBtn');
+    const qrUpload = document.getElementById('qrUpload');
+    const qrTextRow = document.getElementById('qrTextRow');
+    const qrUploadRow = document.getElementById('qrUploadRow');
+
+    const tpl1Preview = document.getElementById('tpl1Preview');
+    const tpl2Preview = document.getElementById('tpl2Preview');
+    const tpl3Preview = document.getElementById('tpl3Preview');
+
+    // preview fields - tpl1
+    const logoPreview1 = document.getElementById('logoPreview1');
+    const brandText1 = document.getElementById('brandText1');
+    const refContainer1 = document.getElementById('refContainer1');
+    const refDisplay1 = document.getElementById('refDisplay1');
+    const certTitle1 = document.getElementById('certTitle1');
+    const completionLine1 = document.getElementById('completionLine1');
+    const courseName1 = document.getElementById('courseName1');
+    const pName1 = document.getElementById('pName1');
+    const descWrap1 = document.getElementById('descWrap1');
+    const pDesc1 = document.getElementById('pDesc1');
+    const pDate1 = document.getElementById('pDate1');
+    const sig1Preview1 = document.getElementById('sig1Preview1');
+    const sig2Preview1 = document.getElementById('sig2Preview1');
+    const sig1Caption1 = document.getElementById('sig1Caption1');
+    const sig2Caption1 = document.getElementById('sig2Caption1');
+    const qrBox1 = document.getElementById('qrBox1');
+    const qrPreview1 = document.getElementById('qrPreview1');
+
+    // preview fields - tpl2
+    const logoPreview2 = document.getElementById('logoPreview2');
+    const brandText2 = document.getElementById('brandText2');
+    const refContainer2 = document.getElementById('refContainer2');
+    const refDisplay2 = document.getElementById('refDisplay2');
+    const certTitle2 = document.getElementById('certTitle2');
+    const completionLine2 = document.getElementById('completionLine2');
+    const courseName2 = document.getElementById('courseName2');
+    const pName2 = document.getElementById('pName2');
+    const descWrap2 = document.getElementById('descWrap2');
+    const pDesc2 = document.getElementById('pDesc2');
+    const pDate2 = document.getElementById('pDate2');
+    const sig1Preview2 = document.getElementById('sig1Preview2');
+    const sig2Preview2 = document.getElementById('sig2Preview2');
+    const sig3Preview2 = document.getElementById('sig3Preview2');
+    const sig1Caption2 = document.getElementById('sig1Caption2');
+    const sig2Caption2 = document.getElementById('sig2Caption2');
+    const sig3Caption2 = document.getElementById('sig3Caption2');
+
+    // preview fields - tpl3
+    const logoPreview3 = document.getElementById('logoPreview3');
+    const brandText3 = document.getElementById('brandText3');
+    const refContainer3 = document.getElementById('refContainer3');
+    const refDisplay3 = document.getElementById('refDisplay3');
+    const certTitle3 = document.getElementById('certTitle3');
+    const completionLine3 = document.getElementById('completionLine3');
+    const courseName3 = document.getElementById('courseName3');
+    const pName3 = document.getElementById('pName3');
+    const descWrap3 = document.getElementById('descWrap3');
+    const pDesc3 = document.getElementById('pDesc3');
+    const pDate3 = document.getElementById('pDate3');
+    const sig2Preview3 = document.getElementById('sig2Preview3');
+    const sig2Caption3 = document.getElementById('sig2Caption3');
+
+    // state
+    let state = { logo:null, sig1:null, sig2:null, sig3:null, qrGenerated:null, qrUploaded:null };
+
+    // helpers
+    function fileToDataURL(file, cb){
+      if(!file){ cb(null); return; }
+      const reader = new FileReader();
+      reader.onload = e => cb(e.target.result);
+      reader.readAsDataURL(file);
+    }
+    function formatDate(d){ if(!d) return '--'; return new Date(d).toLocaleDateString(); }
+    function randomRef(){ return 'R-' + (Math.floor(Math.random()*900000)+1000); }
+    function safeFileName(s){ return (s||'document').toString().trim().replace(/\s+/g,'_').replace(/[^\w\-.]/g,''); }
+
+    // sync range + number
+    logoSizeRange.addEventListener('input', (e)=>{
+      logoSizeNumber.value = e.target.value;
+      applyLogoSize();
+    });
+    logoSizeNumber.addEventListener('input', (e)=>{
+      let v = parseInt(e.target.value) || 72;
+      if(v < 40) v = 40;
+      if(v > 220) v = 220;
+      logoSizeNumber.value = v;
+      logoSizeRange.value = v;
+      applyLogoSize();
+    });
+
+    function applyLogoSize(){
+      const h = (parseInt(logoSizeNumber.value) || 72) + 'px';
+      // set inline height for all logo previews
+      [logoPreview1, logoPreview2, logoPreview3].forEach(img=>{
+        if(img && img.style) img.style.height = h;
+      });
+    }
+
+    // Template switching
+    templateSelect.addEventListener('change', ()=>{ updatePreview(); });
+
+    // logo
+    logoUpload.addEventListener('change', (e)=>{
+      const f = e.target.files[0];
+      fileToDataURL(f, data=>{ state.logo = data; updatePreview(); });
+    });
+    removeLogoBtn.addEventListener('click', ()=>{ state.logo = null; logoUpload.value = ''; updatePreview(); });
+
+    // signatures
+    sig1Upload.addEventListener('change', e=>{
+      const f = e.target.files[0]; fileToDataURL(f, data=>{ state.sig1 = data; updatePreview(); });
+    });
+    sig2Upload.addEventListener('change', e=>{
+      const f = e.target.files[0]; fileToDataURL(f, data=>{ state.sig2 = data; updatePreview(); });
+    });
+    sig3Upload.addEventListener('change', e=>{
+      const f = e.target.files[0]; fileToDataURL(f, data=>{ state.sig3 = data; updatePreview(); });
+    });
+
+    // QR source switching
+    function onQrSourceChange(){
+      if(qrSourceUpload.checked){ qrTextRow.style.display = 'none'; qrUploadRow.style.display = ''; }
+      else { qrTextRow.style.display = ''; qrUploadRow.style.display = 'none'; }
+    }
+    qrSourceText.addEventListener('change', onQrSourceChange);
+    qrSourceUpload.addEventListener('change', onQrSourceChange);
+
+    // generate qr
+    genQrBtn.addEventListener('click', ()=>{
+      const txt = qrText.value.trim();
+      if(!txt){ alert('Enter QR text or URL'); return; }
+      state.qrGenerated = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(txt)}&format=png`;
+      state.qrUploaded = null;
+      updatePreview();
+    });
+    removeQrBtn.addEventListener('click', ()=>{
+      state.qrGenerated = null; state.qrUploaded = null; qrText.value=''; qrUpload.value=''; updatePreview();
+    });
+
+    qrUpload.addEventListener('change', e=>{
+      const f = e.target.files[0]; fileToDataURL(f, data=>{ state.qrUploaded = data; state.qrGenerated = null; updatePreview(); });
+    });
+
+    // ref handlers
+    genRefBtn.addEventListener('click', ()=>{
+      refInput.value = randomRef();
+      updatePreview();
+    });
+    clearRefBtn.addEventListener('click', ()=>{ refInput.value = ''; updatePreview(); });
+
+    // update preview
+    function updatePreview(){
+      // apply logo size first
+      applyLogoSize();
+
+      // common logo
+      if(state.logo){
+        [logoPreview1, logoPreview2, logoPreview3].forEach(img=>{
+          img.src = state.logo; img.style.display=''; // inline height applied already
+        });
+      } else {
+        [logoPreview1, logoPreview2, logoPreview3].forEach(img=>{
+          img.src=''; img.style.display='none';
+        });
+      }
+
+      // tpl1 fields
+      brandText1.textContent = orgName.value.trim() || 'Your Organization';
+      certTitle1.textContent = certTitle.value || 'Certificate of Completion';
+      completionLine1.textContent = completionLine.value || 'has successfully completed the';
+      courseName1.textContent = courseName.value || '[Course]';
+      pName1.textContent = nameEl.value || '[Name]';
+      if(showDescription.checked && descEl.value.trim()){ descWrap1.style.display=''; pDesc1.textContent = descEl.value; } else { descWrap1.style.display='none'; pDesc1.textContent=''; }
+      pDate1.textContent = formatDate(dateEl.value);
+      refDisplay1.textContent = refInput.value.trim() || randomRef();
+      refContainer1.style.display = showRef.checked ? '' : 'none';
+
+      if(state.sig1){ sig1Preview1.src = state.sig1; sig1Preview1.style.display=''; } else { sig1Preview1.src=''; sig1Preview1.style.display='none'; }
+      if(state.sig2){ sig2Preview1.src = state.sig2; sig2Preview1.style.display=''; } else { sig2Preview1.src=''; sig2Preview1.style.display='none'; }
+      sig1Caption1.textContent = sig1Caption.value.trim() || ''; sig1Caption1.style.display = sig1Caption.value.trim() ? '' : 'none';
+      sig2Caption1.textContent = sig2Caption.value.trim() || ''; sig2Caption1.style.display = sig2Caption.value.trim() ? '' : 'none';
+
+      // tpl1 QR
+      if(state.qrUploaded){ qrPreview1.src = state.qrUploaded; qrBox1.style.display = 'flex'; }
+      else if(state.qrGenerated && qrSourceText.checked){ qrPreview1.src = state.qrGenerated; qrBox1.style.display = 'flex'; }
+      else { qrPreview1.src=''; qrBox1.style.display='none'; }
+
+      // tpl2 fields
+      brandText2.textContent = orgName.value.trim() || 'Your Organization';
+      certTitle2.textContent = certTitle.value || 'Certificate of Completion';
+      completionLine2.textContent = completionLine.value || 'has successfully completed the';
+      courseName2.textContent = courseName.value || '[Course]';
+      pName2.textContent = nameEl.value || '[Name]';
+      if(showDescription.checked && descEl.value.trim()){ descWrap2.style.display=''; pDesc2.textContent = descEl.value; } else { descWrap2.style.display='none'; pDesc2.textContent=''; }
+      pDate2.textContent = formatDate(dateEl.value);
+      refDisplay2.textContent = refInput.value.trim() || randomRef();
+      refContainer2.style.display = showRef.checked ? '' : 'none';
+
+      if(state.sig1){ sig1Preview2.src = state.sig1; sig1Preview2.style.display=''; } else { sig1Preview2.src=''; sig1Preview2.style.display='none'; }
+      if(state.sig2){ sig2Preview2.src = state.sig2; sig2Preview2.style.display=''; } else { sig2Preview2.src=''; sig2Preview2.style.display='none'; }
+      if(state.sig3){ sig3Preview2.src = state.sig3; sig3Preview2.style.display=''; } else { sig3Preview2.src=''; sig3Preview2.style.display='none'; }
+      sig1Caption2.textContent = sig1Caption.value.trim() || ''; sig1Caption2.style.display = sig1Caption.value.trim() ? '' : 'none';
+      sig2Caption2.textContent = sig2Caption.value.trim() || ''; sig2Caption2.style.display = sig2Caption.value.trim() ? '' : 'none';
+      sig3Caption2.textContent = sig3Caption.value.trim() || ''; sig3Caption2.style.display = sig3Caption.value.trim() ? '' : 'none';
+
+      // tpl3 fields (single center signature uses sig2)
+      brandText3.textContent = orgName.value.trim() || 'Your Organization';
+      certTitle3.textContent = certTitle.value || 'Certificate of Completion';
+      completionLine3.textContent = completionLine.value || 'has successfully completed the';
+      courseName3.textContent = courseName.value || '[Course]';
+      pName3.textContent = nameEl.value || '[Name]';
+      if(showDescription.checked && descEl.value.trim()){ descWrap3.style.display=''; pDesc3.textContent = descEl.value; } else { descWrap3.style.display='none'; pDesc3.textContent=''; }
+      pDate3.textContent = formatDate(dateEl.value);
+      refDisplay3.textContent = refInput.value.trim() || randomRef();
+      refContainer3.style.display = showRef.checked ? '' : 'none';
+
+      if(state.sig2){ sig2Preview3.src = state.sig2; sig2Preview3.style.display=''; } else { sig2Preview3.src=''; sig2Preview3.style.display='none'; }
+      sig2Caption3.textContent = sig2Caption.value.trim() || ''; sig2Caption3.style.display = sig2Caption.value.trim() ? '' : 'none';
+
+      // switch visible template preview
+      const tpl = templateSelect.value;
+      tpl1Preview.style.display = tpl === 'tpl1' ? 'block' : 'none';
+      tpl2Preview.style.display = tpl === 'tpl2' ? 'block' : 'none';
+      tpl3Preview.style.display = tpl === 'tpl3' ? 'block' : 'none';
+      // also set previewArea class for styling
+      const previewArea = document.getElementById('previewArea');
+      previewArea.classList.remove('tpl-1','tpl-2','tpl-3');
+      previewArea.classList.add(tpl === 'tpl1' ? 'tpl-1' : tpl === 'tpl2' ? 'tpl-2' : 'tpl-3');
+    }
+
+    // wiring events (inputs)
+    document.getElementById('updateBtn').addEventListener('click', updatePreview);
+    [orgName, nameEl, certTitle, completionLine, courseName, showDescription, descEl, dateEl, refInput, sig1Caption, sig2Caption, sig3Caption, qrText, showRef].forEach(el=>{
+      el.addEventListener('input', updatePreview);
+      el.addEventListener('change', updatePreview);
+    });
+
+    // QR source handlers
+    qrSourceText.addEventListener('change', ()=>{ onQrSourceChange(); updatePreview(); });
+    qrSourceUpload.addEventListener('change', ()=>{ onQrSourceChange(); updatePreview(); });
+
+    function onQrSourceChange(){
+      if(qrSourceUpload.checked){ qrTextRow.style.display = 'none'; qrUploadRow.style.display = ''; }
+      else { qrTextRow.style.display = ''; qrUploadRow.style.display = 'none'; }
+    }
+
+    // initial
+    dateEl.value = new Date().toISOString().slice(0,10);
+    refInput.value = randomRef();
+    onQrSourceChange();
+    applyLogoSize();
+    updatePreview();
+
+    // PDF generation
+    document.getElementById('downloadBtn').addEventListener('click', async ()=>{
+      updatePreview();
+      const tpl = templateSelect.value;
+      const element = tpl === 'tpl1' ? tpl1Preview : tpl === 'tpl2' ? tpl2Preview : tpl3Preview;
+      const fname = (tpl === 'tpl1' ? 'certificate1_' : tpl === 'tpl2' ? 'certificate2_' : 'certificate3_') + safeFileName(nameEl.value || 'document') + '.pdf';
+
+      const opt = {
+        margin:10,
+        filename: fname,
+        image:{type:'jpeg',quality:0.98},
+        html2canvas:{scale:2,useCORS:true,allowTaint:false},
+        jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+      };
+
+      // If QR generated remotely, attempt to fetch as blob -> dataURL (best-effort)
+      if(state.qrGenerated && state.qrGenerated.startsWith('http')){
+        try{
+          const res = await fetch(state.qrGenerated);
+          if(res.ok){
+            const blob = await res.blob();
+            const r = new FileReader();
+            r.onload = function(e){ state.qrGenerated = e.target.result; updatePreview(); html2pdf().set(opt).from(element).save(); };
+            r.readAsDataURL(blob);
+            return;
+          }
+        } catch(e){ console.warn('QR fetch failed; proceeding with remote URL', e); }
+      }
+
+      html2pdf().set(opt).from(element).save();
+    });
+
+    // Ensure generate ref button works
+    genRefBtn.addEventListener('click', ()=>{ refInput.value = randomRef(); updatePreview(); });
+    clearRefBtn.addEventListener('click', ()=>{ refInput.value = ''; updatePreview(); });
+
+  </script>
+</body>
+</html>

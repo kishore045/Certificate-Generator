@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Invoice Creator</title>
+<style>
+  body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:0;background:#f4f6fb;padding:14px;color:#111}
+  .wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:480px 1fr;gap:12px}
+  .card{background:#fff;padding:14px;border-radius:10px;box-shadow:0 8px 30px rgba(2,6,23,.06)}
+  label{display:block;margin-top:10px;color:#666}
+  input,textarea,select{width:100%;padding:8px;border-radius:8px;border:1px solid #e8edf4;margin-top:6px}
+  table{width:100%;border-collapse:collapse;margin-top:12px}
+  th,td{padding:8px;border:1px solid #eef2f7;text-align:left}
+  .actions{display:flex;gap:8px;margin-top:12px}
+  button{padding:8px 12px;border-radius:8px;border:0;background:#1e90ff;color:#fff}
+  button.secondary{background:#2d3748}
+  .preview{padding:18px}
+  .invoice-shell{max-width:820px;margin:0 auto;background:#fff;padding:18px;border-radius:10px;border:10px solid #f6f8ff;box-sizing:border-box}
+  .logo img{height:72px}
+  .total-row{text-align:right;font-weight:700;margin-top:8px}
+  .small{font-size:13px;color:#666}
+  @media(max-width:980px){.wrap{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+  <div style="max-width:1200px;margin:12px auto">
+    <a href="index.html" style="display:inline-block;margin-bottom:12px;color:#1e90ff">← Back</a>
+    <div class="wrap">
+      <div class="card">
+        <h2>Invoice Controls</h2>
+
+        <label>Upload Logo</label>
+        <input id="logoUpload" type="file" accept="image/*" />
+        <div style="display:flex;gap:8px;margin-top:8px"><button id="removeLogoBtn" class="secondary">Remove logo</button></div>
+
+        <label>Bill To (Customer)</label>
+        <input id="customerName" placeholder="Customer name" />
+
+        <label>Invoice #</label>
+        <input id="invoiceNo" placeholder="INV-0001" />
+
+        <label>Date</label>
+        <input id="invDate" type="date" />
+
+        <hr />
+
+        <label>Items</label>
+        <table id="itemsTable">
+          <thead><tr><th style="width:46%">Description</th><th style="width:12%">Qty</th><th style="width:20%">Rate</th><th style="width:20%">Amount</th></tr></thead>
+          <tbody id="itemsBody">
+            <tr>
+              <td><input class="item-desc" value="Service" /></td>
+              <td><input class="item-qty" type="number" value="1" min="0" /></td>
+              <td><input class="item-rate" type="number" value="0" min="0" /></td>
+              <td class="item-amount">0.00</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="addRowBtn">Add row</button>
+          <button id="removeRowBtn" class="secondary">Remove last</button>
+        </div>
+
+        <div style="margin-top:12px">
+          <label>Notes</label>
+          <textarea id="notes"></textarea>
+        </div>
+
+        <hr />
+
+        <h3>QR & Signature</h3>
+        <label>QR text / URL (or upload below)</label>
+        <input id="qrText" placeholder="https://example.com/pay?id=123" />
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="genQrBtn">Generate QR</button>
+          <button id="clearQrBtn" class="secondary">Remove QR</button>
+        </div>
+
+        <label style="margin-top:8px">Upload QR image (optional)</label>
+        <input id="qrUpload" type="file" accept="image/*" />
+
+        <label style="margin-top:8px">Signature (to appear at bottom)</label>
+        <input id="sigUpload" type="file" accept="image/*" />
+
+        <div class="actions">
+          <button id="updateBtn">Update preview</button>
+          <button id="downloadBtn" class="secondary">Generate PDF</button>
+        </div>
+      </div>
+
+      <div class="card preview">
+        <h2 style="margin-top:0">Preview</h2>
+
+        <div id="invoicePreview" class="invoice-shell">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="logo"><img id="logoPreview" src="" style="display:none" alt="logo"/></div>
+              <div id="businessName" style="font-weight:700;margin-top:6px">Your Business</div>
+              <div class="small">Address line (optional)</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:700">Invoice</div>
+              <div>Invoice #: <span id="invNoPreview">INV-0001</span></div>
+              <div>Date: <span id="invDatePreview">--</span></div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <strong>Bill To:</strong>
+            <div id="billToPreview">[Customer]</div>
+          </div>
+
+          <table style="width:100%;border-collapse:collapse;margin-top:12px">
+            <thead><tr><th>Description</th><th>Qty</th><th>Rate</th><th>Amount</th></tr></thead>
+            <tbody id="invItemsBody"></tbody>
+          </table>
+
+          <div class="total-row">Total: ₹ <span id="invTotal">0.00</span></div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:18px">
+            <div id="qrBox" style="display:none"><img id="qrPreview" src="" style="height:90px;width:90px"/></div>
+            <div style="text-align:right">
+              <img id="sigPreview" src="" style="max-height:72px;display:block;margin-left:auto;display:none" />
+              <div class="small" id="sigCaptionPreview">Signature</div>
+            </div>
+          </div>
+
+          <div style="margin-top:8px;color:#666" id="notesPreview"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+<!-- html2pdf -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+<script>
+  // Elements
+  const logoUpload = document.getElementById('logoUpload');
+  const removeLogoBtn = document.getElementById('removeLogoBtn');
+  const logoPreview = document.getElementById('logoPreview');
+  const businessName = document.getElementById('businessName');
+
+  const customerName = document.getElementById('customerName');
+  const invoiceNo = document.getElementById('invoiceNo');
+  const invDate = document.getElementById('invDate');
+
+  const itemsBody = document.getElementById('itemsBody');
+  const addRowBtn = document.getElementById('addRowBtn');
+  const removeRowBtn = document.getElementById('removeRowBtn');
+
+  const notes = document.getElementById('notes');
+  const qrText = document.getElementById('qrText');
+  const genQrBtn = document.getElementById('genQrBtn');
+  const clearQrBtn = document.getElementById('clearQrBtn');
+  const qrUpload = document.getElementById('qrUpload');
+
+  const sigUpload = document.getElementById('sigUpload');
+
+  const updateBtn = document.getElementById('updateBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+
+  // preview refs
+  const invNoPreview = document.getElementById('invNoPreview');
+  const invDatePreview = document.getElementById('invDatePreview');
+  const billToPreview = document.getElementById('billToPreview');
+  const invItemsBody = document.getElementById('invItemsBody');
+  const invTotal = document.getElementById('invTotal');
+  const qrBox = document.getElementById('qrBox');
+  const qrPreview = document.getElementById('qrPreview');
+  const sigPreview = document.getElementById('sigPreview');
+  const notesPreview = document.getElementById('notesPreview');
+
+  let state = { logo:null, qrGenerated:null, qrUploaded:null, sig:null };
+
+  function fileToDataURL(file, cb){
+    if(!file){ cb(null); return; }
+    const reader = new FileReader();
+    reader.onload = e => cb(e.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  // logo
+  logoUpload.addEventListener('change', e=>{ const f=e.target.files[0]; fileToDataURL(f,d=>{ state.logo=d; updatePreview(); }); });
+  removeLogoBtn.addEventListener('click', ()=>{ state.logo=null; logoUpload.value=''; updatePreview(); });
+
+  // items
+  addRowBtn.addEventListener('click', ()=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td><input class="item-desc" value="Item description" /></td>
+      <td><input class="item-qty" type="number" value="1" min="0" /></td>
+      <td><input class="item-rate" type="number" value="0" min="0" /></td>
+      <td class="item-amount">0.00</td>`;
+    itemsBody.appendChild(tr);
+    attachItemListeners(tr);
+  });
+  removeRowBtn.addEventListener('click', ()=>{ if(itemsBody.rows.length>1) itemsBody.removeChild(itemsBody.lastElementChild); updatePreview(); });
+
+  // attach listeners for row inputs
+  function attachItemListeners(tr){
+    const qty = tr.querySelector('.item-qty');
+    const rate = tr.querySelector('.item-rate');
+    [qty,rate].forEach(inp => inp.addEventListener('input', updatePreview));
+    tr.querySelector('.item-desc').addEventListener('input', updatePreview);
+  }
+  // attach for initial
+  Array.from(itemsBody.querySelectorAll('tr')).forEach(attachItemListeners);
+
+  // QR
+  genQrBtn.addEventListener('click', ()=>{ const t=qrText.value.trim(); if(!t){ alert('Enter QR text'); return; } state.qrGenerated = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(t)}&format=png`; state.qrUploaded=null; updatePreview(); });
+  clearQrBtn.addEventListener('click', ()=>{ state.qrGenerated=null; state.qrUploaded=null; qrText.value=''; qrUpload.value=''; updatePreview(); });
+  qrUpload.addEventListener('change', e=>{ const f=e.target.files[0]; fileToDataURL(f,d=>{ state.qrUploaded=d; state.qrGenerated=null; updatePreview();}); });
+
+  // signature
+  sigUpload.addEventListener('change', e=>{ const f=e.target.files[0]; fileToDataURL(f,d=>{ state.sig=d; updatePreview(); }); });
+
+  function calcTotals(){
+    let total=0;
+    invItemsBody.innerHTML = '';
+    Array.from(itemsBody.querySelectorAll('tr')).forEach(r=>{
+      const desc = r.querySelector('.item-desc').value || '';
+      const qty = parseFloat(r.querySelector('.item-qty').value) || 0;
+      const rate = parseFloat(r.querySelector('.item-rate').value) || 0;
+      const amt = qty * rate;
+      total += amt;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${desc}</td><td>${qty}</td><td>${rate.toFixed(2)}</td><td>${amt.toFixed(2)}</td>`;
+      invItemsBody.appendChild(tr);
+      // update amount cell in editor row
+      const aCell = r.querySelector('.item-amount');
+      if(aCell) aCell.textContent = amt.toFixed(2);
+    });
+    invTotal.textContent = total.toFixed(2);
+  }
+
+  function updatePreview(){
+    // logo
+    if(state.logo){ logoPreview.src = state.logo; logoPreview.style.display='block'; } else { logoPreview.src=''; logoPreview.style.display='none'; }
+    // header
+    invNoPreview.textContent = invoiceNo.value || 'INV-0001';
+    invDatePreview.textContent = invDate.value ? new Date(invDate.value).toLocaleDateString() : '--';
+    billToPreview.textContent = customerName.value || '[Customer]';
+
+    // items + totals
+    calcTotals();
+
+    // qr
+    if(state.qrUploaded){ qrPreview.src = state.qrUploaded; qrBox.style.display='block'; }
+    else if(state.qrGenerated){ qrPreview.src = state.qrGenerated; qrBox.style.display='block'; }
+    else { qrPreview.src=''; qrBox.style.display='none'; }
+
+    // signature
+    if(state.sig){ sigPreview.src = state.sig; sigPreview.style.display='block'; } else { sigPreview.src=''; sigPreview.style.display='none'; }
+
+    notesPreview.textContent = notes.value || '';
+  }
+
+  // wire update button + live
+  updateBtn.addEventListener('click', updatePreview);
+  [customerName,invoiceNo,invDate,notes,qrText].forEach(el=>el.addEventListener('input', updatePreview));
+  // initial
+  invDate.value = new Date().toISOString().slice(0,10);
+  updatePreview();
+
+  // attach listeners to any new rows after page load
+  function attachAllRows(){
+    Array.from(itemsBody.querySelectorAll('tr')).forEach(attachItemListeners);
+  }
+  attachAllRows();
+
+  // PDF export
+  downloadBtn.addEventListener('click', async ()=>{
+    updatePreview();
+    const element = document.getElementById('invoicePreview');
+    const fname = 'invoice-' + (invoiceNo.value || 'document') + '.pdf';
+    const opt = {
+      margin:10, filename:fname, image:{type:'jpeg',quality:0.98}, html2canvas:{scale:2,useCORS:true}, jsPDF:{unit:'mm',format:'a4',orientation:'portrait'}
+    };
+
+    // if qr is remote, attempt to fetch
+    if(state.qrGenerated && state.qrGenerated.startsWith('http')){
+      try{
+        const res = await fetch(state.qrGenerated);
+        if(res.ok){
+          const blob = await res.blob();
+          const r = new FileReader();
+          r.onload = function(e){ state.qrGenerated = e.target.result; updatePreview(); html2pdf().set(opt).from(element).save(); };
+          r.readAsDataURL(blob); return;
+        }
+      } catch(e){ console.warn('QR fetch failed', e); }
+    }
+
+    html2pdf().set(opt).from(element).save();
+  });
+
+</script>
+</body>
+</html>
